@@ -36,8 +36,8 @@ fn index() -> Template {
     Template::render("index", rocket_dyn_templates::context!{ field: "value" })
 }
 
-#[rocket::post("/<webhook_key>")]
-async fn handle_webhook(webhook_key: String) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+#[rocket::post("/<webhook_key>", data = "<data>")]
+async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got key: {}", webhook_key);
     
     let url = match get_route_from_key(webhook_key) {
@@ -51,7 +51,7 @@ async fn handle_webhook(webhook_key: String) -> Result<status::Accepted<String>,
 
     let client = reqwest::Client::new();
     let res = client.post(url)
-        .body("the exact body that is sent")
+        .body(data)
         .send()
         .await
         .unwrap();
