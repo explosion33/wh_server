@@ -1,1 +1,33 @@
-INDEX
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <script src="/static/script.js"></script> 
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="hooks">
+    {{#each webhooks}}
+
+        {{this.key}} --> {{this.url}}
+        <br>
+    {{/each}}
+    </div>
+
+    <form>
+        <label for="id">Enter API Endpoint</label>
+        <input id="url" type="text">
+        <br>
+        <input type="button" value="Submit" onclick="register_hook(document.getElementById('url').value)">
+    </form>
+</body>
+</html>
+
+
+
+
+
