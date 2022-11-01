@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use reqwest::{Response, StatusCode};
+use rocket::fs::NamedFile;
 use rocket::{
     self,
     Config,
@@ -11,6 +12,7 @@ use rocket::{
 };
 
 use rocket_dyn_templates::Template;
+use serde::Serialize;
 
 
 use std::collections::hash_map::DefaultHasher;
@@ -19,7 +21,7 @@ use std::hash::{Hash, Hasher};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Route {
     key: String,
     url: String,
@@ -33,7 +35,8 @@ struct Create {
 
 #[rocket::get("/")]
 fn index() -> Template {
-    Template::render("index", rocket_dyn_templates::context!{ field: "value" })
+
+    Template::render("index", rocket_dyn_templates::context!{ webhooks: get_routes()})
 }
 
 #[rocket::post("/<webhook_key>", data = "<data>")]
@@ -72,6 +75,10 @@ async fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, 
     Ok(status::Accepted(Some(format!("{}", hash.clone()))))
 }
 
+#[rocket::get("/static/<file>")]
+async fn get_file(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("public/").join(file)).await.ok()
+}
 
 fn get_route_from_key(webhook_key: String) -> Result<String, u8> {
     for route in get_routes() {
@@ -145,7 +152,7 @@ pub fn start_api() {
         .expect("create tokio runtime")
         .block_on(async move {
             let _ = rocket::build()
-            .mount("/", rocket::routes![index, handle_webhook, create_webhook])
+            .mount("/", rocket::routes![index, handle_webhook, create_webhook, get_file])
             .attach(Template::fairing())
             //.manage()
             .launch()
