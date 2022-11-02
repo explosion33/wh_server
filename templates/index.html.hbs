@@ -12,8 +12,7 @@
 <body>
     <div id="hooks">
     {{#each webhooks}}
-
-        {{this.key}} --> {{this.url}}
+        {{this.key}} --> {{this.url}}    | {{this.hash}} | {{this.salt}} | {{this.username}}
         <br>
     {{/each}}
     </div>

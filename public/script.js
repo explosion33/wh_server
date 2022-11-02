@@ -11,6 +11,8 @@ let register_hook = function(url) {
 
     let data = {
         "url": url,
+        "username": "explosion33",
+        "password": "password2" 
     };
 
     xhr.send(JSON.stringify(data));

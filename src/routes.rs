@@ -1,19 +1,17 @@
 use std::path::{Path, PathBuf};
 
 use reqwest::{Response, StatusCode};
-use rocket::fs::NamedFile;
 use rocket::{
     self,
     Config,
     response::status,
     serde::json::Json,
     serde::Deserialize,
-    serde::json::serde_json::Deserializer,
+    serde::Serialize,
+    fs::NamedFile,
 };
 
 use rocket_dyn_templates::Template;
-use serde::Serialize;
-
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -21,17 +19,26 @@ use std::hash::{Hash, Hasher};
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
+use crate::passwords::{hash_new, hash_old};
+
 #[derive(Debug, Serialize)]
 struct Route {
     key: String,
     url: String,
+    username: String,
+    hash: String,
+    salt: String
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 struct Create {
     url: String,
+    username: String,
+    password: String,
 }
+
+// ROUTES
 
 #[rocket::get("/")]
 fn index() -> Template {
@@ -66,19 +73,43 @@ async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Acc
 async fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got {}", data.url);
 
-    let hash = hash_int(get_num_routes()+1);
+    let key = hash_int(get_num_routes()+1);
 
-    println!("hash: {}", hash);
+    println!("key: {}", key);
 
-    write_route(Route {key: hash.clone(), url: data.url.clone()});
+    let mut hash: String = String::new();
+    let mut salt: String = String::new();
+    let mut is_user = false;
+    
+    for route in get_routes() {
+        if route.username == data.username {
 
-    Ok(status::Accepted(Some(format!("{}", hash.clone()))))
+
+            is_user = true;
+            hash = hash_old(data.password.clone(), route.salt.clone()).unwrap();
+            salt = route.salt;
+
+            if hash != route.hash {
+                return Err(status::BadRequest(Some("Invalid Password".to_string())));
+            }
+        }
+    }
+
+    if !is_user {
+        (hash, salt) = hash_new(data.password.clone()).unwrap();
+    }
+
+    write_route(Route {key: key.clone(), url: data.url.clone(), username: data.username.clone(), hash, salt});
+
+    Ok(status::Accepted(Some(format!("{}", key.clone()))))
 }
 
 #[rocket::get("/static/<file>")]
 async fn get_file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("public/").join(file)).await.ok()
 }
+
+// HELPER FUNCTIONS
 
 fn get_route_from_key(webhook_key: String) -> Result<String, u8> {
     for route in get_routes() {
@@ -102,7 +133,7 @@ fn write_route(route: Route) {
         .open("routes.txt")
         .unwrap();
     
-    writeln!(file, "{}, {}", route.key, route.url);
+    writeln!(file, "{}, {}, {}, {}, {}", route.key, route.url, route.hash, route.salt, route.username);
 }
 
 fn get_routes() -> Vec<Route> {
@@ -121,6 +152,9 @@ fn get_routes() -> Vec<Route> {
         let r: Route = Route {
             key: v.next().unwrap().to_string(),
             url: v.next().unwrap().to_string(),
+            hash: v.next().unwrap().to_string(),
+            salt: v.next().unwrap().to_string(),
+            username: v.next().unwrap().to_string(),
         };
 
         routes.push(r);
@@ -141,6 +175,10 @@ fn get_num_routes() -> usize {
     file.read_to_string(&mut contenets);
     contenets.lines().count()
 }
+
+
+
+
 
 pub fn start_api() {
     rocket::tokio::runtime::Builder::new_multi_thread()
