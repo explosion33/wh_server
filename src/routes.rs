@@ -21,13 +21,21 @@ use std::io::prelude::*;
 
 use crate::passwords::{hash_new, hash_old};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
+#[serde(crate = "rocket::serde")]
 struct Route {
     key: String,
     url: String,
     username: String,
     hash: String,
     salt: String
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+struct User {
+    username: String,
+    password: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -43,7 +51,21 @@ struct Create {
 #[rocket::get("/")]
 fn index() -> Template {
 
-    Template::render("index", rocket_dyn_templates::context!{ webhooks: get_routes()})
+    Template::render("index", rocket_dyn_templates::context!{})
+}
+
+#[rocket::post("/user_hooks", data = "<data>")]
+fn get_user_webhooks(data: Json<User>) -> Json<Vec<Route>> {
+    let mut user_routes: Vec<Route> = get_routes();
+
+    user_routes.retain(|route| {
+        if route.username == data.username && hash_old(data.password.clone(), route.salt.clone()).unwrap() == route.hash {
+            return true;
+        }
+        return false;
+    });
+
+    return Json(user_routes);
 }
 
 #[rocket::post("/<webhook_key>", data = "<data>")]
@@ -190,7 +212,7 @@ pub fn start_api() {
         .expect("create tokio runtime")
         .block_on(async move {
             let _ = rocket::build()
-            .mount("/", rocket::routes![index, handle_webhook, create_webhook, get_file])
+            .mount("/", rocket::routes![index, handle_webhook, create_webhook, get_file, get_user_webhooks])
             .attach(Template::fairing())
             //.manage()
             .launch()
