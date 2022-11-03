@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use reqwest::{Response, StatusCode};
 use rocket::{
     self,
     Config,
@@ -21,8 +20,7 @@ use std::io::{prelude::*, SeekFrom};
 
 use crate::passwords::{hash_new, hash_old};
 
-#[derive(Debug, Serialize, Clone)]
-#[serde(crate = "rocket::serde")]
+#[derive(Debug, Clone)]
 struct Route {
     key: String,
     url: String,
@@ -31,21 +29,21 @@ struct Route {
     salt: String
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 struct RouteVisible {
     key: String,
     url: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct User {
     username: String,
     password: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Create {
     url: String,
@@ -54,7 +52,7 @@ struct Create {
 }
 
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Delete {
     key: String,
@@ -69,6 +67,12 @@ struct Delete {
 fn index() -> Template {
 
     Template::render("index", rocket_dyn_templates::context!{})
+}
+
+#[rocket::get("/view")]
+fn view() -> Template {
+
+    Template::render("view", rocket_dyn_templates::context!{})
 }
 
 #[rocket::post("/user_hooks", data = "<data>")]
@@ -236,8 +240,6 @@ fn delete_webhook(data: Json<Delete>) -> Result<status::Accepted<String>, status
 
 }
 
-
-
 #[rocket::get("/static/<file>")]
 async fn get_file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("public/").join(file)).await.ok()
@@ -331,9 +333,6 @@ fn get_next_key() -> Result<String, u8> {
 }
 
 
-
-
-
 pub fn start_api() {
     rocket::tokio::runtime::Builder::new_multi_thread()
         .worker_threads(Config::from(Config::figment()).workers)
@@ -344,7 +343,7 @@ pub fn start_api() {
         .expect("create tokio runtime")
         .block_on(async move {
             let _ = rocket::build()
-            .mount("/", rocket::routes![index, handle_webhook, create_webhook, get_file, get_user_webhooks, delete_webhook])
+            .mount("/", rocket::routes![index, view, handle_webhook, create_webhook, get_file, get_user_webhooks, delete_webhook])
             .attach(Template::fairing())
             //.manage()
             .launch()

@@ -48,6 +48,8 @@ let show_new_hook = function(key, url) {
 
     let delete_btn = document.createElement('button');
     delete_btn.innerText = "Delete"
+    delete_btn.type = "button"
+    delete_btn.className = "btn btn-danger"
     delete_btn.onclick = function() {
         remove_hook(key);
     }
@@ -56,12 +58,6 @@ let show_new_hook = function(key, url) {
     new_hook.appendChild(delete_btn);
 
     document.getElementById("hooks").appendChild(new_hook);
-}
-
-let login = function(username, password) {
-    sessionStorage.setItem("username", username);
-    sessionStorage.setItem("password", password);
-    show_add();
 }
 
 let get_routes = function(username, password) {
@@ -87,30 +83,21 @@ let get_routes = function(username, password) {
 }
 
 let show_login = function() {
-    document.getElementById("add").style.display = "none";
-    document.getElementById("login").style.display = "block";
-    document.getElementById("username").innerText = "";
+    sessionStorage.removeItem("username");
+    sessionStorage.removeItem("password");
+    window.location.href = "/"
 }
 
-let show_add = function() {
-    document.getElementById("add").style.display = "block";
-    document.getElementById("login").style.display = "none";
-    document.getElementById("username").innerText = sessionStorage.getItem("username");
-}
 
 window.onload = function() {
     let username = sessionStorage.getItem("username");
     let password = sessionStorage.getItem("password");
 
-    if (username == null || password == null) {
-        console.log("no user found");
-
-        show_login()
+    if (username == null || password == null || username == "" || password == "") {
+        show_login();
     }
     else {
+        document.getElementById("title").innerText = username;
         get_routes(username, password);
-        console.log(username);
-        console.log(password);
-        show_add()
     }
 }

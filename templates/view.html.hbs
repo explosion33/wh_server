@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- The page supports both dark and light color schemes,
+         and the page author prefers / default is light. -->
+    <meta name="color-scheme" content="dark light">
+
+    <script src="/static/views.js"></script> 
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/bootstrap_dark.css">
+
+
+
+    <title id = "title">Webhooks</title>
+</head>
+
+
+<body>
+    <div id="hooks">
+    </div>
+
+    <form id="add">
+        <h3>Logged in as <span id="username"></span></h3>
+        <br>
+        <label for="id">Enter API Endpoint</label>
+        <input id="url" type="text">
+        <br>
+        <button type="button" class="btn btn-primary" onclick="register_hook(document.getElementById('url').value)">Add</button>
+    </form>
+
+</body>
+</html>
+
+
+
+
+
