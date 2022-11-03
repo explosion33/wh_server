@@ -118,7 +118,12 @@ async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Acc
 fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got {}", data.url);
 
-    let key = get_next_key();
+    let key = match get_next_key() {
+        Ok(n) => n,
+        Err(_) => {
+            return Err(status::BadRequest(Some("Internal Error".to_string())));
+        }
+    };
 
     println!("key: {}", key);
 
@@ -308,7 +313,9 @@ fn get_next_key() -> Result<String, u8> {
         .lines()
         .last() {
             Some(n) => n,
-            None => {return Err(1)},
+            None => {
+                return Ok(hash_int(1));
+            },
         }
         .split(", ")
         .next() {
