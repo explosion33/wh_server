@@ -100,11 +100,16 @@ async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Acc
     println!("got url: {}", url);
 
     let client = reqwest::Client::new();
-    let res = client.post(url)
+    let res = match client.post(url)
         .body(data)
         .send()
         .await
-        .unwrap();
+        {
+            Ok(n) => n,
+            Err(n) => {
+                return Err(status::BadRequest(Some(format!("Error creating request\n{}", n))));
+            }
+        };
 
     Ok(status::Accepted(Some(format!("{}", res.status()))))
 }
@@ -288,23 +293,33 @@ fn get_routes() -> Vec<Route> {
 
 }
 
-fn get_next_key() -> String {
+fn get_next_key() -> Result<String, u8> {
     let mut file = OpenOptions::new()
         .read(true)
         .open("routes.txt")
         .unwrap();
 
     let mut contenets = String::new();
-    file.read_to_string(&mut contenets);
-    let key = contenets
+    match file.read_to_string(&mut contenets) {
+        Ok(_) => {},
+        Err(_) => {return Err(0)},
+    };
+    let key = match match contenets
         .lines()
-        .last()
-        .unwrap()
+        .last() {
+            Some(n) => n,
+            None => {return Err(1)},
+        }
         .split(", ")
-        .next()
-        .unwrap();
+        .next() {
+            Some(n) => n,
+            None => {return Err(2)},
+        };
     
-    return hash_int(usize::from_str_radix(key, 16).unwrap());
+    return Ok(hash_int(match usize::from_str_radix(key, 16) {
+        Ok(n) => n,
+        Err(_) => {return Err(3)},
+    }));
 }
 
 
