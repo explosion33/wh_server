@@ -44,9 +44,18 @@ let show_new_hook = function(key, url) {
     console.log(key, url);
 
     let new_hook = document.createElement('div');
-    new_hook.innerHTML = key + " --> " + url
+    new_hook.innerHTML = window.location.origin + "/hook/" + key + " --> " + url
 
-    document.getElementById("hooks").appendChild(new_hook)
+    let delete_btn = document.createElement('button');
+    delete_btn.innerText = "Delete"
+    delete_btn.onclick = function() {
+        remove_hook(key);
+    }
+
+    new_hook.innerText += "     ";
+    new_hook.appendChild(delete_btn);
+
+    document.getElementById("hooks").appendChild(new_hook);
 }
 
 let login = function(username, password) {
