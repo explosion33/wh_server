@@ -17,7 +17,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use std::fs::OpenOptions;
-use std::io::prelude::*;
+use std::io::{prelude::*, SeekFrom};
 
 use crate::passwords::{hash_new, hash_old};
 
@@ -29,6 +29,13 @@ struct Route {
     username: String,
     hash: String,
     salt: String
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(crate = "rocket::serde")]
+struct RouteVisible {
+    key: String,
+    url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -46,6 +53,16 @@ struct Create {
     password: String,
 }
 
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+struct Delete {
+    key: String,
+    username: String,
+    password: String,
+}
+
+
 // ROUTES
 
 #[rocket::get("/")]
@@ -55,20 +72,21 @@ fn index() -> Template {
 }
 
 #[rocket::post("/user_hooks", data = "<data>")]
-fn get_user_webhooks(data: Json<User>) -> Json<Vec<Route>> {
-    let mut user_routes: Vec<Route> = get_routes();
+fn get_user_webhooks(data: Json<User>) -> Json<Vec<RouteVisible>> {
+    let mut user_routes: Vec<RouteVisible> = vec![];
 
-    user_routes.retain(|route| {
+    for route in get_routes() {
         if route.username == data.username && hash_old(data.password.clone(), route.salt.clone()).unwrap() == route.hash {
-            return true;
+            println!("{}, {}", route.username, data.username);
+            let vr: RouteVisible = RouteVisible {key: route.key, url: route.url};
+            user_routes.push(vr);
         }
-        return false;
-    });
+    }
 
     return Json(user_routes);
 }
 
-#[rocket::post("/<webhook_key>", data = "<data>")]
+#[rocket::post("/hook/<webhook_key>", data = "<data>")]
 async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got key: {}", webhook_key);
     
@@ -92,10 +110,10 @@ async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Acc
 }
 
 #[rocket::post("/hook", data = "<data>")]
-async fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got {}", data.url);
 
-    let key = hash_int(get_num_routes()+1);
+    let key = get_next_key();
 
     println!("key: {}", key);
 
@@ -125,6 +143,89 @@ async fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, 
 
     Ok(status::Accepted(Some(format!("{}", key.clone()))))
 }
+
+#[rocket::post("/delete", data = "<data>")]
+fn delete_webhook(data: Json<Delete>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("routes.txt")
+        .unwrap();
+
+    let mut output = String::new();
+
+    let mut contenets = String::new();
+    match file.read_to_string(&mut contenets) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+    
+    let mut found: bool = false;
+
+    for line in contenets.lines() {
+        let mut v= line.split(", ");
+
+        let r: Route = Route {
+            key: v.next().unwrap().to_string(),
+            url: v.next().unwrap().to_string(),
+            hash: v.next().unwrap().to_string(),
+            salt: v.next().unwrap().to_string(),
+            username: v.next().unwrap().to_string(),
+        };
+
+        if r.username == data.username && r.key == data.key {
+            if hash_old(data.password.clone(), r.salt.clone()).unwrap() == r.hash {
+                println!("{}", r.key);
+                found = true;
+            }
+            else {
+                return Err(status::BadRequest(Some("Invalid Password".to_string())));
+            }
+            
+            
+        } 
+        else {
+            output += line;
+            output += "\n";
+        }
+    }
+
+    if !found {
+        return Err(status::BadRequest(Some("Key not found".to_string())));
+    }
+
+    println!("{}", output);
+
+    match file.set_len(0) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+    match file.seek(SeekFrom::Start(0)) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+    match write!(file, "{}", output) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+
+    Ok(status::Accepted(Some(format!(""))))
+
+}
+
+
 
 #[rocket::get("/static/<file>")]
 async fn get_file(file: PathBuf) -> Option<NamedFile> {
@@ -187,7 +288,7 @@ fn get_routes() -> Vec<Route> {
 
 }
 
-fn get_num_routes() -> usize {
+fn get_next_key() -> String {
     let mut file = OpenOptions::new()
         .read(true)
         .open("routes.txt")
@@ -195,7 +296,15 @@ fn get_num_routes() -> usize {
 
     let mut contenets = String::new();
     file.read_to_string(&mut contenets);
-    contenets.lines().count()
+    let key = contenets
+        .lines()
+        .last()
+        .unwrap()
+        .split(", ")
+        .next()
+        .unwrap();
+    
+    return hash_int(usize::from_str_radix(key, 16).unwrap());
 }
 
 
@@ -212,7 +321,7 @@ pub fn start_api() {
         .expect("create tokio runtime")
         .block_on(async move {
             let _ = rocket::build()
-            .mount("/", rocket::routes![index, handle_webhook, create_webhook, get_file, get_user_webhooks])
+            .mount("/", rocket::routes![index, handle_webhook, create_webhook, get_file, get_user_webhooks, delete_webhook])
             .attach(Template::fairing())
             //.manage()
             .launch()
