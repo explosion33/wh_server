@@ -135,8 +135,6 @@ fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status
     
     for route in get_routes() {
         if route.username == data.username {
-
-
             is_user = true;
             hash = hash_old(data.password.clone(), route.salt.clone()).unwrap();
             salt = route.salt;
@@ -144,6 +142,7 @@ fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status
             if hash != route.hash {
                 return Err(status::BadRequest(Some("Invalid Password".to_string())));
             }
+            break;
         }
     }
 
