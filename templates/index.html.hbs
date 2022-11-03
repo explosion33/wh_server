@@ -11,17 +11,29 @@
 </head>
 <body>
     <div id="hooks">
-    {{#each webhooks}}
-        {{this.key}} --> {{this.url}}    | {{this.hash}} | {{this.salt}} | {{this.username}}
-        <br>
-    {{/each}}
     </div>
 
-    <form>
+    <form id="add" style="display: none;">
+        <h3>Logged in as <span id="username"></span></h3>
+        <br>
         <label for="id">Enter API Endpoint</label>
         <input id="url" type="text">
         <br>
         <input type="button" value="Submit" onclick="register_hook(document.getElementById('url').value)">
+    </form>
+
+    <form id="login" style="display: block;">
+        Login
+        <br>
+        <label for="user">Username</label>
+        <input id="user" type="text">
+        <br>
+        <br>
+        <label for="pass">password</label>
+        <input id="pass" type="password">
+        <br>
+        <br>
+        <input type="button" value="Submit" onclick="login(document.getElementById('user').value, document.getElementById('pass').value)">
     </form>
 </body>
 </html>
