@@ -75,11 +75,13 @@ fn index() -> Template {
 fn get_user_webhooks(data: Json<User>) -> Json<Vec<RouteVisible>> {
     let mut user_routes: Vec<RouteVisible> = vec![];
 
+    let mut is_user: bool = false;
     for route in get_routes() {
-        if route.username == data.username && hash_old(data.password.clone(), route.salt.clone()).unwrap() == route.hash {
+        if route.username == data.username && (is_user ||hash_old(data.password.clone(), route.salt.clone()).unwrap() == route.hash) {
             println!("{}, {}", route.username, data.username);
             let vr: RouteVisible = RouteVisible {key: route.key, url: route.url};
             user_routes.push(vr);
+            is_user = true;
         }
     }
 
@@ -187,7 +189,7 @@ fn delete_webhook(data: Json<Delete>) -> Result<status::Accepted<String>, status
         };
 
         if r.username == data.username && r.key == data.key {
-            if hash_old(data.password.clone(), r.salt.clone()).unwrap() == r.hash {
+            if !found && hash_old(data.password.clone(), r.salt.clone()).unwrap() == r.hash {
                 println!("{}", r.key);
                 found = true;
             }
