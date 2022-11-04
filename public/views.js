@@ -184,6 +184,7 @@ window.onload = function() {
     }
     else {
         document.getElementById("title").innerText = username;
+        document.getElementById("username").innerText = username;
         get_routes(username, password);
     }
 }
