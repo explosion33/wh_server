@@ -60,6 +60,13 @@ struct Delete {
     password: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Deletes {
+    keys: Vec<String>,
+    username: String,
+    password: String,
+}
 
 // ROUTES
 
@@ -240,6 +247,114 @@ fn delete_webhook(data: Json<Delete>) -> Result<status::Accepted<String>, status
 
 }
 
+#[rocket::post("/delete_multiple", data = "<data>")]
+fn delete_webhooks(mut data: Json<Deletes>) -> Result<status::Accepted<Json<Vec<String>>>, status::BadRequest<String>> {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("routes.txt")
+        .unwrap();
+
+    let mut output = String::new();
+
+    let mut contenets = String::new();
+    match file.read_to_string(&mut contenets) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+    
+    let mut found: Vec<String> = vec![];
+    let mut is_user: bool = false;
+
+    for line in contenets.lines() {
+        let mut v= line.split(", ");
+
+        let r: Route = Route {
+            key: v.next().unwrap().to_string(),
+            url: v.next().unwrap().to_string(),
+            hash: v.next().unwrap().to_string(),
+            salt: v.next().unwrap().to_string(),
+            username: v.next().unwrap().to_string(),
+        };
+
+        let mut add_line: bool = true;
+
+        if r.username == data.username {
+            for i in 0..data.keys.len() {
+                if r.key == data.keys[i] {
+                    if is_user || hash_old(data.password.clone(), r.salt.clone()).unwrap() == r.hash {
+                        is_user = true;
+                        add_line = false;
+
+                        found.push(data.keys[i].clone());
+                        println!("{}", data.keys[i]);
+                        data.keys.remove(i);
+                        break;
+                    }
+
+                    else {
+                        return Err(status::BadRequest(Some("Invalid Password".to_string())));
+                    }
+                }
+            }
+        } 
+        if add_line {
+            output += line;
+            output += "\n";
+        }
+    }
+
+    println!("{}", output);
+
+    match file.set_len(0) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+    match file.seek(SeekFrom::Start(0)) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+    match write!(file, "{}", output) {
+        Ok(_) => {},
+        Err(n) => {
+            println!("{}", n);
+            return Err(status::BadRequest(Some("IO Error".to_string())));
+        },
+    };
+
+    Ok(status::Accepted(Some(Json(found))))
+}
+
+#[rocket::post("/user", data = "<data>")]
+fn verify_user(data: Json<User>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+    let mut hash: String = String::new();
+    let mut salt: String = String::new();
+    
+    for route in get_routes() {
+        if route.username == data.username {
+            hash = hash_old(data.password.clone(), route.salt.clone()).unwrap();
+            salt = route.salt;
+
+            if hash != route.hash {
+                return Err(status::BadRequest(Some("Invalid Password".to_string())));
+            }
+            return Ok(status::Accepted(Some("".to_string())));
+        }
+    }
+
+    return Err(status::BadRequest(Some("User not found".to_string())));
+}
+
+
 #[rocket::get("/static/<file>")]
 async fn get_file(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("public/").join(file)).await.ok()
@@ -343,7 +458,7 @@ pub fn start_api() {
         .expect("create tokio runtime")
         .block_on(async move {
             let _ = rocket::build()
-            .mount("/", rocket::routes![index, view, handle_webhook, create_webhook, get_file, get_user_webhooks, delete_webhook])
+            .mount("/", rocket::routes![index, view, handle_webhook, create_webhook, get_file, get_user_webhooks, delete_webhook, delete_webhooks, verify_user])
             .attach(Template::fairing())
             //.manage()
             .launch()

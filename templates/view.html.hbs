@@ -20,8 +20,35 @@
 
 
 <body>
-    <div id="hooks">
+    <div class="container overflow-auto" style="margin-top: 16px; margin-bottom: 16px; max-height: 200px; max-width: 60%;">
+        <div class="row" style="margin-bottom: 16px;">
+            <div class="col-sm-5">
+                <strong>webhook url</strong>
+            </div>
+            <div class="col-sm-5">
+                <strong>api endpoint</strong>         
+            </div>
+            <div class="col-sm-2 text-center">
+                <input type="checkbox" id="select_all" onclick="select_all()">
+            </div>
+        </div>
+        <div id="hooks">
+
+        </div>
     </div>
+
+    <div class="container" style="max-width: 60%;">
+        <div class="row text-center" style="margin-top: 16px;">
+            <div class="col-sm-5">
+            </div>
+            <div class="col-sm-5">       
+            </div>
+            <div class="col-sm-2 text-center">
+                <button id="delete" hidden="true" type="button" class="btn btn-danger" onclick="delete_all()">Delete</button>
+            </div>
+        </div>
+    </div>
+    
 
     <form id="add">
         <h3>Logged in as <span id="username"></span></h3>
