@@ -351,7 +351,7 @@ fn verify_user(data: Json<User>) -> Result<status::Accepted<String>, status::Bad
         }
     }
 
-    return Err(status::BadRequest(Some("User not found".to_string())));
+    return Ok(status::Accepted(Some("".to_string())));
 }
 
 

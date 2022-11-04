@@ -20,44 +20,60 @@
 
 
 <body>
-    <div class="container overflow-auto" style="margin-top: 16px; margin-bottom: 16px; max-height: 200px; max-width: 60%;">
-        <div class="row" style="margin-bottom: 16px;">
-            <div class="col-sm-5">
-                <strong>webhook url</strong>
-            </div>
-            <div class="col-sm-5">
-                <strong>api endpoint</strong>         
-            </div>
-            <div class="col-sm-2 text-center">
-                <input type="checkbox" id="select_all" onclick="select_all()">
+    <div class="row">
+        <div class="col-sm-1"></div>
+        <div class="col-sm-10">
+            <div class="container overflow-auto" style="margin-top: 16px; margin-bottom: 16px; max-height: 500px; max-width: 60%;">
+                <div class="row" style="margin-bottom: 16px;">
+                    <div class="col-sm-6">
+                        <strong>webhook url</strong>
+                    </div>
+                    <div class="col-sm-5">
+                        <strong>api endpoint</strong>         
+                    </div>
+                    <div class="col-sm-1 text-center">
+                        <input type="checkbox" id="select_all" onclick="select_all()">
+                    </div>
+                </div>
+                <div id="hooks">
+
+                </div>
             </div>
         </div>
-        <div id="hooks">
-
-        </div>
-    </div>
-
-    <div class="container" style="max-width: 60%;">
-        <div class="row text-center" style="margin-top: 16px;">
-            <div class="col-sm-5">
-            </div>
-            <div class="col-sm-5">       
-            </div>
-            <div class="col-sm-2 text-center">
-                <button id="delete" hidden="true" type="button" class="btn btn-danger" onclick="delete_all()">Delete</button>
-            </div>
+        <div class="col-sm-1 text-center" style="margin-top: 16px;">
+            <button type="button" class="btn btn-danger" onclick="show_login()">logout</button>
         </div>
     </div>
     
 
-    <form id="add">
-        <h3>Logged in as <span id="username"></span></h3>
-        <br>
-        <label for="id">Enter API Endpoint</label>
-        <input id="url" type="text">
-        <br>
-        <button type="button" class="btn btn-primary" onclick="register_hook(document.getElementById('url').value)">Add</button>
-    </form>
+    <div class="row">
+        <div class="col-sm-1"></div>
+        <div class="col-sm-10">
+            <div class="container" style="max-width: 60%;">
+                <div class="row text-center" style="margin-top: 16px;">
+                    <div class="col-sm-6">
+                    </div>
+                    <div class="col-sm-5">       
+                    </div>
+                    <div class="col-sm-1 text-center">
+                        <button id="delete" hidden="true" type="button" class="btn btn-danger" onclick="delete_all()">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-1"></div>
+    </div>
+    
+    <div class="container fixed-bottom text-center" style="margin-bottom: 8%;">
+        <div class = "row">
+            <div class="col sm-2" style="margin: 24px;"></div>
+            <div class="col sm-8">
+                <input id="url" type="text" placeholder="https://example.com">
+                <button type="button" class="btn btn-primary" onclick="register_hook(document.getElementById('url').value)">Add</button>
+            </div>
+            <div class="col sm-2" style="margin: 24px;"></div>
+        </div>
+    </div>
 
 </body>
 </html>

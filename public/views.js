@@ -72,13 +72,13 @@ let show_new_hook = function(key, url) {
     let element =
     `
     <div class="row">
-        <div class="col-sm-5">
+        <div class="col-sm-6">
             ${window.location.origin + "/hook/" + key}
         </div>
         <div class="col-sm-5">
             ${url}               
         </div>
-        <div class="col-sm-2 text-center">
+        <div class="col-sm-1 text-center">
             <input type="checkbox" id="${key}" name="select" onclick="check_for_delete()">
         </div>
     </div>
