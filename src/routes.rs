@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use reqwest::header;
 use rocket::{
     self,
     Config,
@@ -8,6 +9,7 @@ use rocket::{
     serde::Deserialize,
     serde::Serialize,
     fs::NamedFile,
+    request::{self, Outcome, FromRequest}, Request, http::Header,
 };
 
 use rocket_dyn_templates::Template;
@@ -68,6 +70,40 @@ struct Deletes {
     password: String,
 }
 
+
+struct HeaderList {
+    keys: Vec<String>,
+    values: Vec<String>,
+    length: usize,
+}
+
+#[derive(Debug)]
+enum Infallable {
+}
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for HeaderList {
+    type Error = Infallable;
+
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        let mut headers = HeaderList {
+            keys: vec![],
+            values: vec![],
+            length: 0,
+        };
+
+        for header in req.headers().iter() {
+            headers.keys.push(header.name().to_string());
+            headers.values.push(header.value().to_string());
+            headers.length += 1;
+        }
+
+        Outcome::Success(
+            headers
+        )
+    }
+}
+
 // ROUTES
 
 #[rocket::get("/")]
@@ -100,7 +136,7 @@ fn get_user_webhooks(data: Json<User>) -> Json<Vec<RouteVisible>> {
 }
 
 #[rocket::post("/hook/<webhook_key>", data = "<data>")]
-async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+async fn handle_webhook(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got key: {}", webhook_key);
     
     let url = match get_route_from_key(webhook_key) {
@@ -113,10 +149,14 @@ async fn handle_webhook(webhook_key: String, data: String) -> Result<status::Acc
     println!("got url: {}", url);
 
     let client = reqwest::Client::new();
-    let res = match client.post(url)
-        .body(data)
-        .send()
-        .await
+    let mut builder = client.post(url).body(data);
+
+    for i in 0..headers.length {
+        builder = builder.header(headers.keys[i].clone(), headers.values[i].clone());
+    } 
+
+
+    let res = match builder.send().await
         {
             Ok(n) => n,
             Err(n) => {
