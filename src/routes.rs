@@ -136,7 +136,7 @@ fn get_user_webhooks(data: Json<User>) -> Json<Vec<RouteVisible>> {
 }
 
 #[rocket::post("/hook/<webhook_key>", data = "<data>")]
-async fn handle_webhook(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+async fn handle_webhook_post(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
     println!("got key: {}", webhook_key);
     
     let url = match get_route_from_key(webhook_key) {
@@ -166,6 +166,135 @@ async fn handle_webhook(webhook_key: String, data: String, headers: HeaderList) 
 
     Ok(status::Accepted(Some(format!("{}", res.status()))))
 }
+
+#[rocket::get("/hook/<webhook_key>", data = "<data>")]
+async fn handle_webhook_get(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+    println!("got key: {}", webhook_key);
+    
+    let url = match get_route_from_key(webhook_key) {
+        Ok(n) => n,
+        Err(_) => {
+            return Err(status::BadRequest(Some("Invalid Webhook Key".to_string())));
+        }
+    };
+
+    println!("got url: {}", url);
+
+    let client = reqwest::Client::new();
+    let mut builder = client.get(url).body(data);
+
+    for i in 0..headers.length {
+        builder = builder.header(headers.keys[i].clone(), headers.values[i].clone());
+    } 
+
+
+    let res = match builder.send().await
+        {
+            Ok(n) => n,
+            Err(n) => {
+                return Err(status::BadRequest(Some(format!("Error creating request\n{}", n))));
+            }
+        };
+
+    Ok(status::Accepted(Some(format!("{}", res.status()))))
+}
+
+#[rocket::patch("/hook/<webhook_key>", data = "<data>")]
+async fn handle_webhook_patch(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+    println!("got key: {}", webhook_key);
+    
+    let url = match get_route_from_key(webhook_key) {
+        Ok(n) => n,
+        Err(_) => {
+            return Err(status::BadRequest(Some("Invalid Webhook Key".to_string())));
+        }
+    };
+
+    println!("got url: {}", url);
+
+    let client = reqwest::Client::new();
+    let mut builder = client.patch(url).body(data);
+
+    for i in 0..headers.length {
+        builder = builder.header(headers.keys[i].clone(), headers.values[i].clone());
+    } 
+
+
+    let res = match builder.send().await
+        {
+            Ok(n) => n,
+            Err(n) => {
+                return Err(status::BadRequest(Some(format!("Error creating request\n{}", n))));
+            }
+        };
+
+    Ok(status::Accepted(Some(format!("{}", res.status()))))
+}
+
+#[rocket::put("/hook/<webhook_key>", data = "<data>")]
+async fn handle_webhook_put(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+    println!("got key: {}", webhook_key);
+    
+    let url = match get_route_from_key(webhook_key) {
+        Ok(n) => n,
+        Err(_) => {
+            return Err(status::BadRequest(Some("Invalid Webhook Key".to_string())));
+        }
+    };
+
+    println!("got url: {}", url);
+
+    let client = reqwest::Client::new();
+    let mut builder = client.put(url).body(data);
+
+    for i in 0..headers.length {
+        builder = builder.header(headers.keys[i].clone(), headers.values[i].clone());
+    } 
+
+
+    let res = match builder.send().await
+        {
+            Ok(n) => n,
+            Err(n) => {
+                return Err(status::BadRequest(Some(format!("Error creating request\n{}", n))));
+            }
+        };
+
+    Ok(status::Accepted(Some(format!("{}", res.status()))))
+}
+
+#[rocket::delete("/hook/<webhook_key>", data = "<data>")]
+async fn handle_webhook_delete(webhook_key: String, data: String, headers: HeaderList) -> Result<status::Accepted<String>, status::BadRequest<String>> {
+    println!("got key: {}", webhook_key);
+    
+    let url = match get_route_from_key(webhook_key) {
+        Ok(n) => n,
+        Err(_) => {
+            return Err(status::BadRequest(Some("Invalid Webhook Key".to_string())));
+        }
+    };
+
+    println!("got url: {}", url);
+
+    let client = reqwest::Client::new();
+    let mut builder = client.delete(url).body(data);
+
+    for i in 0..headers.length {
+        builder = builder.header(headers.keys[i].clone(), headers.values[i].clone());
+    } 
+
+
+    let res = match builder.send().await
+        {
+            Ok(n) => n,
+            Err(n) => {
+                return Err(status::BadRequest(Some(format!("Error creating request\n{}", n))));
+            }
+        };
+
+    Ok(status::Accepted(Some(format!("{}", res.status()))))
+}
+
 
 #[rocket::post("/hook", data = "<data>")]
 fn create_webhook(data: Json<Create>) -> Result<status::Accepted<String>, status::BadRequest<String>> {
@@ -498,7 +627,8 @@ pub fn start_api() {
         .expect("create tokio runtime")
         .block_on(async move {
             let _ = rocket::build()
-            .mount("/", rocket::routes![index, view, handle_webhook, create_webhook, get_file, get_user_webhooks, delete_webhook, delete_webhooks, verify_user])
+            .mount("/", rocket::routes![index, view, handle_webhook_get, handle_webhook_post, handle_webhook_put, handle_webhook_patch, handle_webhook_delete,
+                    create_webhook, get_file, get_user_webhooks, delete_webhook, delete_webhooks, verify_user])
             .attach(Template::fairing())
             //.manage()
             .launch()
